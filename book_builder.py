@@ -6,8 +6,10 @@ import markdown
 from pdf_builder_core import (
     A5_WIDTH, A5_HEIGHT, CONTENT_RECT, CSS_STYLES, clean_arabic_markdown
 )
+from pdf_rtl import rtl_transform
 
-ARCHIVE = pymupdf.Archive('/usr/share/fonts/truetype/dejavu')
+FONTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts')
+ARCHIVE = pymupdf.Archive(FONTS_DIR)
 
 def render_html_to_doc(html_content, temp_path):
     story = pymupdf.Story(html=html_content, archive=ARCHIVE)
@@ -22,7 +24,12 @@ def render_html_to_doc(html_content, temp_path):
     writer.close()
     return pymupdf.open(temp_path)
 
-def wrap_html(body_content):
+def wrap_html(body_content, _label='?'):
+    # True-RTL layout: right-side list markers, mirrored tables (TOC and
+    # metadata tables carry no-mirror classes and pass through verbatim).
+    body_content, rtl_stats = rtl_transform(body_content)
+    if rtl_stats['li'] or rtl_stats['rows']:
+        print(f'  [rtl:{_label}] li={rtl_stats["li"]} markers={rtl_stats["markers"]} rows={rtl_stats["rows"]} cells={rtl_stats["cells"]}')
     return f"""<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -39,7 +46,7 @@ def wrap_html(body_content):
 def get_cover_html():
     return wrap_html("""
     <div class="cover-page">
-        <div style="font-size: 11pt; letter-spacing: 2pt; color: #C5A059; margin-bottom: 20pt; font-weight: bold;">
+        <div style="font-size: 12pt; letter-spacing: 2pt; color: #C5A059; margin-bottom: 20pt; font-weight: bold;">
             سلسلة التمكين المالي الشخصي بالمغرب
         </div>
         
@@ -58,7 +65,7 @@ def get_cover_html():
         
         <div style="margin: 25pt auto; width: 60px; height: 2px; background: #C5A059;"></div>
 
-        <div style="font-size: 10pt; color: #2A5C45; font-weight: bold; line-height: 1.8;">
+        <div style="font-size: 10.5pt; color: #2A5C45; font-weight: bold; line-height: 1.8;">
             يتضمن تحديات الادخار الكبرى (1,000 / 5,000 / 10,000 درهم)<br>
             ونظام الأظرفة، وجداول التتبع الأسبوعية، وخطة الـ 90 يوماً
         </div>
@@ -74,7 +81,7 @@ def get_copyright_html():
     return wrap_html("""
     <div class="copyright-page">
         <h2 style="text-align: center; border: none; font-size: 11pt; color: #1A4331; margin-bottom: 15pt;">بيانات الإصدار وحقوق النشر</h2>
-        <table style="width: 100%; border: none; font-size: 8pt; margin-bottom: 20pt;">
+        <table style="width: 100%; border: none; font-size: 8.5pt; margin-bottom: 20pt;">
             <tr><td style="border: none; width: 35%; font-weight: bold;">عنوان العمل:</td><td style="border: none;">فلوسي فين كتمشي؟</td></tr>
             <tr><td style="border: none; font-weight: bold;">العنوان الفرعي:</td><td style="border: none;">الدليل العملي للشاب المغربي لتنظيم الراتب، التحكم في المصاريف، الادخار وبناء أول خطة مالية</td></tr>
             <tr><td style="border: none; font-weight: bold;">الإعداد والتحرير:</td><td style="border: none;">فريق إعداد الثقافة المالية وتبسيط الاقتصاد الشخصي</td></tr>

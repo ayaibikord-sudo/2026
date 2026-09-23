@@ -161,11 +161,11 @@ h1.chapter-title { font-size: 1.9rem; text-align: center; padding: 18px 15px 14p
     box-shadow: 0 4px 14px rgba(197,160,89,.18); scroll-margin-top: 20px; }
 h1.chapter-title.front { font-size: 1.6rem; }
 .book-body > h2:first-of-type { margin-top: 30px; }
-h2 { font-size: 1.45rem; border-right: 5px solid var(--gold); background: linear-gradient(to left, var(--gold-soft), transparent 75%);
+h2 { font-size: 1.45rem; text-align: right; border-right: 5px solid var(--gold); background: linear-gradient(to left, var(--gold-soft), transparent 75%);
     padding: 8px 14px; border-radius: 6px 0 0 6px; margin: 2.2rem 0 1rem; }
-h3 { font-size: 1.22rem; color: var(--primary-light); margin: 1.7rem 0 .8rem; padding-bottom: 6px;
+h3 { font-size: 1.22rem; text-align: right; color: var(--primary-light); margin: 1.7rem 0 .8rem; padding-bottom: 6px;
     border-bottom: 1.5px dashed var(--border); }
-h4 { font-size: 1.08rem; color: #33463D; margin: 1.3rem 0 .6rem; }
+h4 { font-size: 1.08rem; text-align: right; color: #33463D; margin: 1.3rem 0 .6rem; }
 p { margin-bottom: 1rem; text-align: justify; }
 strong { color: var(--primary); }
 a { color: var(--primary-light); }
@@ -177,7 +177,7 @@ hr { border: none; height: 2px; margin: 42px auto; max-width: 420px;
     background: linear-gradient(to left, transparent, var(--gold) 25%, var(--gold) 75%, transparent); position: relative; }
 hr::after { content: "◆"; position: absolute; top: 50%; right: 50%; transform: translate(50%,-58%);
     color: var(--gold); background: var(--cream-bg); padding: 0 12px; font-size: 13px; }
-ul, ol { margin: 0 26px 1.2rem 0; }
+ul, ol { margin: 0 26px 1.2rem 0; padding-inline-start: 0; padding-left: 0; list-style-position: outside; }
 li { margin-bottom: .55rem; }
 li::marker { color: var(--gold-dark); font-weight: 800; }
 /* tracker chips like [ 100 ] */
@@ -191,7 +191,7 @@ table { width: 100%; border-collapse: collapse; margin: 24px 0; background: #fff
     border-radius: 10px; overflow: hidden; border: 1px solid var(--border); direction: rtl; }
 th, td { padding: 11px 14px; border: 1px solid #E4DCCB; vertical-align: top; line-height: 1.75; }
 th { background: var(--primary); color: #fff; font-family: 'Cairo', Tahoma, sans-serif;
-    font-weight: 700; font-size: 15.5px; }
+    font-weight: 700; font-size: 15.5px; text-align: right; }
 td { font-size: 16.5px; text-align: right; }
 td[align="center"], th[align="center"],
 td[style*="text-align: center"], th[style*="text-align: center"] { text-align: center !important; }
