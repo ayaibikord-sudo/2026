@@ -188,6 +188,8 @@ hr {
 """
 
 def clean_arabic_markdown(text):
+    # Strip RTL wrapper divs (for Markdown viewers; PDF has its own RTL handling)
+    text = re.sub(r'^<div dir="rtl">\s*$|^</div>\s*$', '', text, flags=re.M)
     text = text.replace('الدليل العميل', 'الدليل العملي')
     text = text.replace('االدخار', 'الادخار')
     text = text.replace('ميثاق الرشف', 'ميثاق الشرف')

@@ -22,6 +22,8 @@ def slug(i: int) -> str:
 
 
 def build_body(md_text: str) -> tuple[str, list[tuple[str, str]]]:
+    # Strip RTL wrapper divs (they are for Markdown viewers; HTML has its own dir="rtl")
+    md_text = re.sub(r'^<div dir="rtl">\s*$|^</div>\s*$', '', md_text, flags=re.M)
     html = markdown.markdown(
         md_text, extensions=["tables", "fenced_code", "nl2br"]
     )
