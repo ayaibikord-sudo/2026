@@ -11,9 +11,10 @@ from pdf_builder_core import (
     CONTENT_RECT, CSS_STYLES, clean_arabic_markdown
 )
 from book_builder import (
-    get_cover_html, get_copyright_html, get_disclaimer_dedication_html,
+    get_copyright_html, get_disclaimer_dedication_html,
     get_toc_html, render_html_to_doc, wrap_html
 )
+from build_cover import build_cover_doc
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Running header/footer use DejaVu Sans: Almarai's alef presentation forms
@@ -53,7 +54,12 @@ def build_pdf_pipeline():
     dummy_toc_html = get_toc_html(dummy_toc_items)
     
     doc = pymupdf.open()
-    doc_cover = render_html_to_doc(get_cover_html(), 'tmp_build/cover.pdf')
+    # Designed vector cover (Amiri calligraphy) as page 1, replacing the old
+    # plain inner-title page. Also refresh the standalone cover files.
+    doc_cover = build_cover_doc()
+    doc_cover.save('tmp_build/cover.pdf', garbage=4, deflate=True)
+    doc_cover.save('FLOUCI_COVER_A5.pdf', garbage=4, deflate=True)
+    doc_cover[0].get_pixmap(dpi=150).save('FLOUCI_COVER_A5.png')
     doc.insert_pdf(doc_cover)
     
     doc_cr = render_html_to_doc(get_copyright_html(), 'tmp_build/cr.pdf')
@@ -136,35 +142,58 @@ def build_pdf_pipeline():
                 color=(0.35, 0.35, 0.35)
             )
             
-    # Ghost-strip cover-up: Story duplicates table header rows as empty
-    # green strips on later pages (pre-existing engine quirk, also in the
-    # old DejaVu build). Every genuine header cell in this book contains
-    # text (audited), so any textless green strip is certainly a ghost:
-    # paint it paper-white. Pagination and real content are untouched.
+    # Ghost-strip removal: Story duplicates table-header-cell backgrounds as
+    # stray green strips at wrong y positions (engine quirk). Some land in
+    # row gaps (empty), others underlap real body-text rows (black text on
+    # green, e.g. old p14/p54). Discriminator: genuine `th` cells ALWAYS
+    # carry WHITE text (see CSS), so a green strip is genuine iff a white
+    # span overlaps it. Ghosts are SURGICALLY REMOVED with graphics-only
+    # redaction (text + images kept), never painted over — white cover-rects
+    # would erase body text sitting on underlapping ghosts. Page 1 (cover)
+    # is skipped: its gradient bands are close to the green (by design).
     GHOST_GREEN = (0.102, 0.263, 0.192)  # #1A4331
-    ghosts_covered, ghosts_skipped = 0, 0
+    TOL = 0.008  # measured th fills match within 0.001; cover bands differ
+
+    def _whiteish(c):
+        return (c >> 16 & 255) / 255 > 0.9 and (c >> 8 & 255) / 255 > 0.9 \
+            and (c & 255) / 255 > 0.9
+
+    def _overlaps(r, t):
+        return not (r.x1 < t[0] or r.x0 > t[2] or r.y1 < t[1] or r.y0 > t[3])
+
+    ghosts_gone, ghosts_kept = 0, 0
     for pindex in range(final_doc.page_count):
+        if pindex == 0:
+            continue  # designed cover page: no tables, no ghosts
         page = final_doc[pindex]
-        lines = [ln['bbox'] for b in page.get_text('dict')['blocks']
-                 for ln in b.get('lines', [])]
+        spans = [sp for b in page.get_text('dict')['blocks']
+                 for ln in b.get('lines', []) for sp in ln.get('spans', [])]
+        n_annots = 0
         for dr in page.get_drawings():
             r = dr['rect']
             c = dr.get('fill')
             if not (r.width > 8 and 3 <= r.height <= 12 and c and len(c) == 3
-                    and abs(c[0] - GHOST_GREEN[0]) < 0.02
-                    and abs(c[1] - GHOST_GREEN[1]) < 0.02
-                    and abs(c[2] - GHOST_GREEN[2]) < 0.02):
+                    and abs(c[0] - GHOST_GREEN[0]) < TOL
+                    and abs(c[1] - GHOST_GREEN[1]) < TOL
+                    and abs(c[2] - GHOST_GREEN[2]) < TOL):
                 continue
-            near = any(not (r.x1 < t[0] - 1.5 or r.x0 > t[2] + 1.5
-                            or r.y1 < t[1] - 1.5 or r.y0 > t[3] + 1.5)
-                       for t in lines)
-            if near:
-                ghosts_skipped += 1
-                continue
-            cover = pymupdf.Rect(r.x0 - 1, r.y0 - 1, r.x1 + 1, r.y1 + 1)
-            page.draw_rect(cover, color=None, fill=(1, 1, 1), width=0, overlay=True)
-            ghosts_covered += 1
-    print(f'Ghost strips covered: {ghosts_covered}, skipped (near text): {ghosts_skipped}')
+            ov = [sp for sp in spans if _overlaps(r, sp['bbox'])]
+            if any(_whiteish(sp['color']) for sp in ov):
+                ghosts_kept += 1
+                continue  # genuine header cell: white label inside
+            rr = r + (-0.3, -0.3, 0.3, 0.3)  # stay off neighbouring rules
+            page.add_redact_annot(
+                pymupdf.Quad(rr.top_left, rr.top_right,
+                             rr.bottom_left, rr.bottom_right),
+                fill=None, cross_out=False)
+            n_annots += 1
+            ghosts_gone += 1
+        if n_annots:
+            page.apply_redactions(
+                images=pymupdf.PDF_REDACT_IMAGE_NONE,
+                graphics=pymupdf.PDF_REDACT_LINE_ART_REMOVE_IF_TOUCHED,
+                text=pymupdf.PDF_REDACT_TEXT_NONE)
+    print(f'Ghost strips removed: {ghosts_gone}, genuine kept: {ghosts_kept}')
 
     final_pdf_path = 'FLOUCI_FIN_KATMCHI_PRINT_READY_A5.pdf'
     # Use maximum compression and garbage collection to deduplicate fonts and resources
